@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>artillery</title>
+  <script src="../../jsgame0.js"></script>
+  <style type="text/css" media="screen">
+body {
+  background-color: white;
+  color: black;
+}
+.hidden {
+  display: none;
+}
+#screen {
+  background-image: url(images/background.jpg);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+#original {
+  margin-left: 1em;
+}
+  </style>
+</head>
+
+<body>
+<section id="imageLoader" class="hidden">
+  <img class="hidden" src="images/background.jpg" alt="background" data-name="background">
+  <img class="hidden" src="images/bullet.png" alt="bullet" data-name="bullet">
+  <img class="hidden" src="images/expl1.png" alt="expl1" data-name="expl1">
+  <img class="hidden" src="images/expl2.png" alt="expl2" data-name="expl2">
+  <img class="hidden" src="images/expl3.png" alt="expl3" data-name="expl3">
+  <img class="hidden" src="images/expl4.png" alt="expl4" data-name="expl4">
+  <img class="hidden" src="images/expl5.png" alt="expl5" data-name="expl5">
+  <img class="hidden" src="images/expl6.png" alt="expl6" data-name="expl6">
+  <img class="hidden" src="images/gunbarrel1.png" alt="gunbarrel1" data-name="gunbarrel1">
+  <img class="hidden" src="images/gunbarrel2.png" alt="gunbarrel2" data-name="gunbarrel2">
+  <img class="hidden" src="images/gunbody1.png" alt="gunbody1" data-name="gunbody1">
+  <img class="hidden" src="images/gunbody2.png" alt="gunbody2" data-name="gunbody2">
+  <img class="hidden" src="images/landscape.png" alt="landscape" data-name="landscape">
+</section>
+<section id="soundLoader" class="hidden">
+  <audio class="hidden" controls preload="auto" src="sounds/canon.wav" data-name="canon">Your browser does not support the audio element.</audio>
+  <audio class="hidden" controls preload="auto" src="sounds/explosion.wav" data-name="explosion">Your browser does not support the audio element.</audio>
+  <audio class="hidden" controls preload="auto" src="sounds/whine.wav" data-name="whine">Your browser does not support the audio element.</audio>
+</section>
+
+<main>
+<h1>artillery</h1>
+
+<canvas id="screen">
+The game screen appears here if your browser supports the Canvas API.
+</canvas>
+<section id="controls">
+  <button type="button" id="reset">Reset</button>
+  <button type="button" id="pause">Pause</button>
+</section>
+
+<h2>Attribution</h2>
+
+<p><a href="https://wireframe.raspberrypi.org/issues/44">Code your own Artillery-style tank game, pages 60-61, by Mark Vanstone</a>.</p>
+
+<p>Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/legalcode">Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported</a>.</p>
+
+<h2>Original Python code</h2>
+
+<pre id="original"><code>
+# Artillery
+from random import randint
+from pygame import Surface, image
+from pygame.locals import *
+import math
+
+landSurface = Surface((800,600),SRCALPHA)
+landSurface.blit(image.load(&#x27;images/landscape.png&#x27;) ,(0,0))
+gun1 = {&quot;name&quot;: &quot;Player 1&quot;, &quot;actor&quot;: Actor(&#x27;gunbody1&#x27;, center=(700, 300)), &quot;turret&quot;: Actor(&#x27;gunbarrel1&#x27;, center=(695, 280)), &quot;angle&quot;: 30, &quot;multiplier&quot;: 1, &quot;color&quot;: (255,0,0)}
+gun2 = {&quot;name&quot;: &quot;Player 2&quot;, &quot;actor&quot;: Actor(&#x27;gunbody2&#x27;, center=(200, 400)), &quot;turret&quot;: Actor(&#x27;gunbarrel2&#x27;, center=(210, 380)), &quot;angle&quot;: 30, &quot;multiplier&quot;: -1, &quot;color&quot;: (0,0,255)}
+bullet = {&quot;active&quot;: False, &quot;actor&quot;: Actor(&#x27;bullet&#x27;, center=(0, 0)), &quot;angle&quot;: 0, &quot;speed&quot;: 0, &quot;count&quot;:0}
+bang = {&quot;actor&quot;: Actor(&#x27;expl1&#x27;, center=(0, 0)), &quot;frame&quot;: 0}
+activePlayer = gun1
+gameState = 0
+
+def draw():
+    screen.blit(&#x27;background&#x27;,(0,0))
+    screen.blit(landSurface, (0, 0))
+    if bullet[&quot;active&quot;] == True: bullet[&quot;actor&quot;].draw()
+    if gameState != 1:
+        gun1[&quot;turret&quot;].draw()
+        gun1[&quot;actor&quot;].draw()
+    if gameState != 2:
+        gun2[&quot;turret&quot;].draw()
+        gun2[&quot;actor&quot;].draw()
+    if gameState == 0: drawText(activePlayer[&quot;name&quot;], activePlayer[&quot;color&quot;])
+    if gameState == 1: drawText(&quot;Player 2 Wins!&quot;, (0,255,0))
+    if gameState == 2: drawText(&quot;Player 1 Wins!&quot;, (0,255,0))
+    if bang[&quot;frame&quot;] != 0: bang[&quot;actor&quot;].draw()
+
+def update():
+    global activePlayer, gameState
+    if gameState == 0:
+        if keyboard.space and bullet[&quot;active&quot;] == False: fireBullet()
+        if keyboard.up: activePlayer[&quot;angle&quot;] = limit(activePlayer[&quot;angle&quot;]-1,5,90)
+        if keyboard.down: activePlayer[&quot;angle&quot;] = limit(activePlayer[&quot;angle&quot;]+1,5,90)
+        gun1[&quot;turret&quot;].angle = gun1[&quot;angle&quot;]
+        gun2[&quot;turret&quot;].angle = -gun2[&quot;angle&quot;]
+        if bullet[&quot;active&quot;] == True:
+            bullet[&quot;count&quot;] += 1
+            bullet[&quot;speed&quot;] = bullet[&quot;speed&quot;]*0.991
+            bullet[&quot;actor&quot;].pos = getNewPos(90-bullet[&quot;angle&quot;])
+            if checkBullet(bullet[&quot;actor&quot;].pos) :
+                explosion(bullet[&quot;actor&quot;].pos)
+                bullet[&quot;active&quot;] = False
+                if activePlayer == gun1: activePlayer = gun2
+                else: activePlayer = gun1
+        if bullet[&quot;actor&quot;].y &gt; 600: bullet[&quot;active&quot;] = False
+    if bang[&quot;frame&quot;] &gt; 0:
+        bang[&quot;actor&quot;].image = &quot;expl&quot;+str(int(bang[&quot;frame&quot;]))
+        bang[&quot;frame&quot;] += 0.2
+        if bang[&quot;frame&quot;] &gt; 6: bang[&quot;frame&quot;] = 0
+
+def limit(n, minn, maxn):
+    return max(min(maxn, n), minn)
+
+def fireBullet():
+    bullet[&quot;active&quot;] = True
+    bullet[&quot;actor&quot;].pos = activePlayer[&quot;turret&quot;].pos
+    bullet[&quot;angle&quot;] = activePlayer[&quot;angle&quot;] * activePlayer[&quot;multiplier&quot;]
+    bullet[&quot;speed&quot;] = 10
+    bullet[&quot;count&quot;] = 0
+    sounds.canon.play()
+
+def getNewPos(angle):
+    newX = bullet[&quot;actor&quot;].x - (bullet[&quot;speed&quot;]*math.cos(math.radians(angle)))
+    newY = bullet[&quot;actor&quot;].y - (bullet[&quot;speed&quot;]*math.sin(math.radians(angle)))
+    newY += 10-bullet[&quot;speed&quot;]
+    if bullet[&quot;count&quot;] == 60: sounds.whine.play()
+    return newX, newY
+
+def checkBullet(pos):
+    global gameState
+    if pos[0]&gt;0 and pos[0]&lt;800 and pos[1]&gt;0 and pos[1]&lt;600:
+        pixel = landSurface.get_at((int(pos[0]),int(pos[1])))
+        if pixel[3] &gt; 0: return True
+    if gun1[&quot;actor&quot;].collidepoint(pos):
+        gameState = 1
+        explosion(gun1[&quot;actor&quot;].pos)
+    if gun2[&quot;actor&quot;].collidepoint(pos):
+        gameState = 2
+        explosion(gun2[&quot;actor&quot;].pos)
+    return False
+
+def explosion(pos):
+    x = int(pos[0])
+    y = int(pos[1])
+    sounds.explosion.play()
+    bullet[&quot;active&quot;] = False
+    bang[&quot;actor&quot;].pos = pos
+    bang[&quot;frame&quot;] = 1
+    for c in range(2000):
+        landSurface.set_at((x+randint(0,100)-50,y+randint(0,100)-50), (0,0,0,0))
+        if c &lt; 1500: landSurface.set_at((x+randint(0,50)-25,y+randint(0,40)-20), (0,0,0,0))
+        if c &lt; 1000: landSurface.set_at((x+randint(0,20)-10,y+randint(0,30)-15), (0,0,0,0))
+
+def drawText(t,col):
+    screen.draw.text(t, center = (400, 60), owidth=0.5, ocolor=(0,0,0), color=col , fontsize=40)
+</code></pre>
+</main>
+
+<script>
+// Artillery
+var landSurface, gun1, gun2, bullet, bang, activePlayer, gameState;
+
+function reset() {
+  screen.clear('transparent');
+  screen.blit('landscape', [0, 0]);
+  landSurface = screen.getSurface();
+
+  gun1 = {
+    name: "Player 1",
+    actor: new Actor('gunbody1'),
+    turret: new Actor('gunbarrel1'),
+    angle: 30,
+    multiplier: 1,
+    color: [255, 0, 0]
+  };
+  gun1['actor'].center = [700, 300];
+  gun1['turret'].center = [695, 280];
+
+  gun2 = {
+    name: "Player 2",
+    actor: new Actor('gunbody2'),
+    turret: new Actor('gunbarrel2'),
+    angle: 30,
+    multiplier: -1,
+    color: [0, 0, 255]
+  };
+  gun2['actor'].center = [200, 400];
+  gun2['turret'].center = [210, 380];
+
+  bullet = {
+    active: false,
+    actor: new Actor('bullet'),
+    angle: 0,
+    speed: 0,
+    count: 0
+  };
+  bullet['actor'].center = [0, 0];
+
+  bang = {
+    actor: new Actor('expl1'),
+    frame: 0
+  };
+  bang['actor'].center = [0, 0];
+
+  activePlayer = gun1;
+  gameState = 0;
+}
+
+function draw() {
+  screen.blit(landSurface, [0, 0]);
+  if (bullet["active"]) {
+    bullet["actor"].draw();
+  }
+  if (gameState !== 1) {
+    gun1["turret"].draw();
+    gun1["actor"].draw();
+  }
+  if (gameState !== 2) {
+    gun2["turret"].draw();
+    gun2["actor"].draw();
+  }
+  if (gameState === 0) {
+    drawText(activePlayer["name"], activePlayer["color"]);
+  }
+  if (gameState === 1) {
+    drawText("Player 2 Wins!", [0, 255, 0]);
+  }
+  if (gameState === 2) {
+    drawText("Player 1 Wins!", [0, 255, 0]);
+  }
+  if (bang["frame"] !== 0) {
+    bang["actor"].draw();
+  }
+}
+
+function update() {
+  if (gameState === 0) {
+    if (keyboard[keys.SPACE] && (!bullet["active"])) {
+      fireBullet();
+    }
+    if (keyboard[keys.UP]) {
+      activePlayer["angle"] = limit(activePlayer["angle"] - 1, 5, 90);
+    }
+    if (keyboard[keys.DOWN]) {
+      activePlayer["angle"] = limit(activePlayer["angle"] + 1, 5, 90);
+    }
+    gun1["turret"].angle = gun1["angle"];
+    gun2["turret"].angle = -gun2["angle"];
+    if (bullet["active"]) {
+      bullet["count"] += 1;
+      bullet["speed"] *= 0.991;
+      bullet["actor"].pos = getNewPos(90 - bullet["angle"]);
+      if (checkBullet(bullet["actor"].pos)) {
+        explosion(bullet["actor"].pos);
+        bullet["active"] = false;
+        if (activePlayer === gun1) {
+          activePlayer = gun2;
+        }
+        else {
+          activePlayer = gun1;
+        }
+      }
+    }
+    if (bullet["actor"].posy > 600) {
+      bullet["active"] = false;
+    }
+  }
+  if (bang["frame"] > 0) {
+    bang["actor"].name = "expl" + Math.trunc(bang["frame"]);
+    bang["frame"] += 0.2;
+    if (bang["frame"] > 6) {
+      bang["frame"] = 0;
+    }
+  }
+}
+
+function limit(n, minn, maxn) {
+  return Math.max(Math.min(maxn, n), minn);
+}
+
+function fireBullet() {
+  bullet["active"] = true;
+  bullet["actor"].pos = activePlayer["turret"].pos;
+  bullet["angle"] = activePlayer["angle"] * activePlayer["multiplier"];
+  bullet["speed"] = 10;
+  bullet["count"] = 0;
+  sounds.canon.play();
+}
+
+function getNewPos(angle) {
+  let newX = bullet["actor"].posx - (bullet["speed"] * Math.cos(angle * Math.PI / 180)),
+      newY = bullet["actor"].posy - (bullet["speed"] * Math.sin(angle * Math.PI / 180));
+  newY += 10 - bullet["speed"];
+  if (bullet["count"] === 60) {
+    sounds.whine.play();
+  }
+  return [newX, newY];
+}
+
+function checkBullet(pos) {
+  if ((pos[0] > 0) && (pos[0] < 800) && (pos[1] > 0) && (pos[1] < 600)) {
+    let pixel = landSurface.getAt(Math.trunc(pos[0]), Math.trunc(pos[1]));
+    if (pixel[3] > 0) {
+      return true;
+    }
+  }
+  if (gun1["actor"].collidepoint(pos)) {
+    gameState = 1;
+    explosion(gun1["actor"].pos);
+  }
+  if (gun2["actor"].collidepoint(pos)) {
+    gameState = 2;
+    explosion(gun2["actor"].pos);
+  }
+  return false;
+}
+
+/*
+ * Return a random integer N such that min <= N < max.
+ */
+function getRandomInteger(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor((Math.random() * (max - min)) + min);
+}
+
+function explosion(pos) {
+  let x = Math.trunc(pos[0]),
+      y = Math.trunc(pos[1]);
+  sounds.explosion.play();
+  bullet["active"] = false;
+  bang["actor"].pos = pos;
+  bang["frame"] = 1;
+  for (let c = 0; c < 2000; c++) {
+    landSurface.setAt(x + getRandomInteger(0, 101) - 50, y + getRandomInteger(0, 101) - 50, [0, 0, 0, 0]);
+    if (c < 1500) {
+      landSurface.setAt(x + getRandomInteger(0, 51) - 25, y + getRandomInteger(0, 41) - 20, [0, 0, 0, 0]);
+    }
+    if (c < 1000) {
+      landSurface.setAt(x + getRandomInteger(0, 21) - 10, y + getRandomInteger(0, 31) - 15, [0, 0, 0, 0]);
+    }
+  }
+}
+
+function drawText(t, col) {
+  screen.draw.text(t, {
+    center: [400, 60],
+    owidth: 0.5,
+    ocolor: [0, 0, 0],
+    color: col,
+    fontsize: 40
+  });
+}
+
+window.addEventListener('load', (event) => {
+  images.LOAD('#imageLoader img');
+  sounds.LOAD('#soundLoader audio');
+  // Non-standard order for Surface
+  screen.set_mode('#screen', '#reset', '#pause');
+  reset();
+  screen.draw.playButton();
+});
+</script>
+</body>
+
+</html>
