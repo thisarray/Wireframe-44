@@ -262,7 +262,7 @@ function update() {
     gun2["turret"].angle = -gun2["angle"];
     if (bullet["active"]) {
       bullet["count"] += 1;
-      bullet["speed"] *= 0.991;
+      bullet["speed"] = bullet["speed"] * 0.991;
       bullet["actor"].pos = getNewPos(90 - bullet["angle"]);
       if (checkBullet(bullet["actor"].pos)) {
         explosion(bullet["actor"].pos);
